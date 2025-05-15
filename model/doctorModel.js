@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
 
-// Définition du schéma pour le modèle Doctor
 const doctorSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: [true, 'Le nom du médecin est obligatoire']
   },
   title: {
     type: String,
-    required: true
+    required: [true, 'Le titre/spécialité du médecin est obligatoire']
   },
   image: {
     type: String,
@@ -16,13 +15,12 @@ const doctorSchema = new mongoose.Schema({
   },
   address: {
     type: String,
-    required: true
+    required: [true, 'L\'adresse du médecin est obligatoire']
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true // Ajoute automatiquement createdAt et updatedAt
 });
 
-// Création du modèle à partir du schéma
-const Doctor = mongoose.model('Doctor', doctorSchema);
-
-module.exports = Doctor;
+module.exports = mongoose.model('Doctor', doctorSchema);

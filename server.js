@@ -3,14 +3,13 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
-// Charger les variables d'environnement
 dotenv.config();
-
-// Importer les routes
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
+const authRoutes = require('./routes/authRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
-// Initialiser l'application Express
+
 const app = express();
 
 // Middleware
@@ -19,7 +18,14 @@ app.use(express.json());
 
 // Routes
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/doctors',doctorRoutes)
+app.use('/api/doctors',doctorRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/verify-token', authRoutes);
+app.use('/api/login',authRoutes),
+
+
+
 
 // Route de test
 app.get('/', (req, res) => {
