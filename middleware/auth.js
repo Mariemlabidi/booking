@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../model/userModel');
 
-
-
 // Middleware pour protéger les routes et vérifier l'authentification
 exports.protect = async (req, res, next) => {
   try {
@@ -35,7 +33,9 @@ exports.protect = async (req, res, next) => {
     }
 
     // 4. Optionnel: Vérifier si l'utilisateur a changé de mot de passe après l'émission du token
-    if (currentUser.passwordChangedAfter(decoded.iat)) {
+    // Vérification sécurisée que la méthode existe et est une fonction
+    if (typeof currentUser.passwordChangedAfter === 'function' && 
+        currentUser.passwordChangedAfter(decoded.iat)) {
       return res.status(401).json({
         success: false,
         message: 'Votre mot de passe a été modifié récemment. Veuillez vous reconnecter.'

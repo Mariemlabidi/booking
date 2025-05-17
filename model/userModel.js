@@ -45,6 +45,22 @@ UserSchema.pre('save', async function(next) {
 // Vérification du mot de passe
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+  
 };
+
+UserSchema.methods.passwordChangedAfter = function(JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+    return JWTTimestamp < changedTimestamp;
+  }
+  // Par défaut, retourne false si l'utilisateur n'a jamais changé son mot de passe
+  return false;
+};
+
+
+
 
 module.exports = mongoose.model('User', UserSchema);
