@@ -27,6 +27,7 @@ app.use('/api/login',authRoutes),
 
 
 
+
 // Route de test
 app.get('/', (req, res) => {
   res.send('API de gestion des rendez-vous médicaux est opérationnelle');

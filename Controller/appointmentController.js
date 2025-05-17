@@ -4,6 +4,7 @@ const Appointment = require('../model/appointmentModel');
 exports.createAppointment = async (req, res) => {
   try {
     const { appointmentDate, appointmentTime } = req.body;
+
     
     // Vérifier si le créneau horaire est disponible
     const isAvailable = await Appointment.isTimeSlotAvailable(appointmentDate, appointmentTime);
@@ -16,7 +17,10 @@ exports.createAppointment = async (req, res) => {
     }
     
     // Créer le rendez-vous
-    const appointment = await Appointment.create(req.body);
+      const appointment = await Appointment.create({
+      ...req.body,
+      user: req.user.id // ✅ correction ici
+    });
     
     res.status(201).json({
       success: true,
@@ -128,37 +132,6 @@ exports.updateAppointment = async (req, res) => {
   }
 };
 
-// Annuler un rendez-vous
-exports.cancelAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
-      { status: 'annulé' },
-      { new: true }
-    );
-    
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Rendez-vous non trouvé'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Rendez-vous annulé avec succès',
-      data: appointment
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'annulation du rendez-vous:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'annulation du rendez-vous',
-      error: error.message
-    });
-  }
-};
-
 // Vérifier la disponibilité des créneaux
 exports.checkAvailability = async (req, res) => {
   try {
@@ -207,6 +180,64 @@ exports.checkAvailability = async (req, res) => {
       success: false,
       message: 'Erreur lors de la vérification de disponibilité',
       error: error.message
+    });
+  }
+};
+// GET /api/appointments/user
+exports.getUserAppointments = async (req, res) => {
+  try {
+    const userEmail = req.user.email; // L'email de l'utilisateur connecté (supposé injecté par un middleware d'auth)
+
+    const appointments = await Appointment.find({ user: req.user._id }).sort({ appointmentDate: -1 });
+
+
+    res.status(200).json({
+      success: true,
+      data: appointments
+    });
+  } catch (err) {
+    console.error('Erreur lors de la récupération des rendez-vous utilisateur :', err);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des rendez-vous.'
+    });
+  }
+};
+// PUT /api/appointments/:id/cancel
+exports.cancelAppointment = async (req, res) => {
+  const appointmentId = req.params.id;
+
+  try {
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Rendez-vous introuvable.'
+      });
+    }
+
+    // Vérifier que le rendez-vous appartient à l'utilisateur ou qu'il est admin
+    if (req.user.role === 'client' && appointment.user.toString() !== req.user.id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à annuler ce rendez-vous.'
+      });
+    }
+
+    appointment.status = 'cancelled'; // ou "annulé" si tu gardes le français
+    await appointment.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Rendez-vous annulé avec succès.',
+      data: appointment
+    });
+  } catch (err) {
+    console.error('Erreur lors de l\'annulation du rendez-vous :', err);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de l\'annulation du rendez-vous.'
     });
   }
 };

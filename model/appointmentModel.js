@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const appointmentSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   patientName: {
     type: String,
     required: [true, 'Le nom du patient est requis']
@@ -40,23 +45,22 @@ const appointmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Méthode pour vérifier si un créneau est disponible
-appointmentSchema.statics.isTimeSlotAvailable = async function(date, time) {
+// ✅ Définition de la méthode statique
+appointmentSchema.statics.isTimeSlotAvailable = async function (date, time) {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
-  
-  const existingAppointment = await this.findOne({
+
+  const existing = await this.findOne({
     appointmentDate: { $gte: startOfDay, $lte: endOfDay },
     appointmentTime: time,
     status: { $in: ['planifié', 'confirmé'] }
   });
-  
-  return !existingAppointment;
+
+  return !existing;
 };
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);
-
 module.exports = Appointment;
