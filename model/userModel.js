@@ -29,7 +29,12 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  phone: {
+  type: String,
+  required: false
+}
+
 });
 
 // Hash du mot de passe avant sauvegarde

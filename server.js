@@ -8,14 +8,19 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const testimonialRoutes= require('./routes/testimonialRoutes');
 
 
 const app = express();
-
+app.use(express.static('uploads'));
 // Middleware
 app.use(cors());
 app.use(express.json());
 
+app.get('/image/:filename', (req, res) => {
+  const fileName = req.params.filename;
+  res.sendFile(`${__dirname}/uploads/${fileName}`);
+});
 // Routes
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctors',doctorRoutes);
@@ -23,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/verify-token', authRoutes);
 app.use('/api/login',authRoutes),
+app.use('/api/testimonials' , testimonialRoutes);
 
 
 

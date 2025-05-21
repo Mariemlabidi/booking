@@ -42,7 +42,7 @@ class DoctorController {
       const PORT = process.env.PORT || 3000;
       const imagePath = req.file
         ? `http://localhost:${PORT}/uploads/${req.file.filename}`
-        : 'assets/images/default-doctor.jpg';
+        : 'public/image-1746475546843-194949197.jpg';
       
       const newDoctor = new Doctor({
         name,
