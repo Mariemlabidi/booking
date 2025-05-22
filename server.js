@@ -12,7 +12,7 @@ const testimonialRoutes= require('./routes/testimonialRoutes');
 
 
 const app = express();
-app.use(express.static('uploads'));
+app.use('/uploads', express.static('uploads'));
 // Middleware
 app.use(cors());
 app.use(express.json());
