@@ -1,13 +1,14 @@
-
 const User = require('../model/userModel');
 const generateToken = require('../config/jwt');
+const Patient = require('../model/patientModel');
+
 
 // @desc    Enregistrer un utilisateur
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone, birthDate, address } = req.body;
 
     // Vérifier si l'utilisateur existe déjà
     const userExists = await User.findOne({ email });
@@ -23,6 +24,17 @@ exports.register = async (req, res) => {
       password,
       role
     });
+
+    // 👉 Si l'utilisateur est un client, on l'ajoute dans la table Patient
+    if (role === 'client') {
+      await Patient.create({
+        name,
+        email,
+        phone: phone || '00000000', // Valeur par défaut si non fournie
+        birthDate: birthDate || null,
+        address: address || ''
+      });
+    }
 
     // Générer le token JWT
     const token = generateToken(user._id, user.role);
@@ -45,6 +57,7 @@ exports.register = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Connexion utilisateur
 // @route   POST /api/auth/login

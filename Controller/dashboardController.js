@@ -1,20 +1,15 @@
-// dashboard.controller.js
 const Doctor = require('../model/doctorModel');
 const Patient = require('../model/patientModel');
 const Appointment = require('../model/appointmentModel');
+const User = require('../model/userModel');
 const moment = require('moment');
 const mongoose = require('mongoose');
 
 // Récupère les statistiques générales
 exports.getStats = async (req, res) => {
   try {
-    // Nombre total de médecins
     const totalDoctors = await Doctor.countDocuments();
-    
-    // Nombre total de patients
     const totalPatients = await Patient.countDocuments();
-    
-    // Nombre total de rendez-vous
     const totalAppointments = await Appointment.countDocuments();
     
     // Nombre de rendez-vous aujourd'hui
@@ -43,18 +38,12 @@ exports.getStats = async (req, res) => {
 // Récupère la liste des médecins
 exports.getDoctors = async (req, res) => {
   try {
-    // Ajout d'un log pour vérifier si cette méthode est appelée
-    console.log('getDoctors called');
-    
     const doctors = await Doctor.find({})
       .select('_id name')
       .sort({ name: 1 });
     
-    // Log pour voir si des médecins sont trouvés
-    console.log(`Found ${doctors.length} doctors`);
-    
     res.status(200).json(doctors.map(doctor => ({
-      id: doctor._id.toString(), // Conversion explicite de l'ObjectId en string
+      id: doctor._id.toString(),
       name: doctor.name
     })));
   } catch (error) {
@@ -71,7 +60,7 @@ exports.getPatients = async (req, res) => {
       .sort({ name: 1 });
     
     res.status(200).json(patients.map(patient => ({
-      id: patient._id.toString(), // Conversion explicite de l'ObjectId en string
+      id: patient._id.toString(),
       name: patient.name
     })));
   } catch (error) {
@@ -80,25 +69,53 @@ exports.getPatients = async (req, res) => {
   }
 };
 
-// Récupère les rendez-vous pour un médecin spécifique (par jour)
 exports.getDoctorAppointments = async (req, res) => {
   try {
     const doctorId = req.params.id;
+    console.log('=== DEBUG getDoctorAppointments ===');
+    console.log('DoctorId reçu:', doctorId);
     
-    // Vérifier si l'ID est valide
     if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+      console.log('ID invalide:', doctorId);
       return res.status(400).json({ message: 'ID de médecin invalide' });
     }
     
-    // Récupérer les données des 7 derniers jours
-    const endDate = moment().endOf('day').toDate();
-    const startDate = moment().subtract(6, 'days').startOf('day').toDate();
+    // ✅ CORRIGÉ : Période élargie pour inclure les dates futures
+    // Récupérer les données des 3 derniers jours + aujourd'hui + 3 prochains jours
+    const startDate = moment().subtract(3, 'days').startOf('day').toDate();
+    const endDate = moment().add(3, 'days').endOf('day').toDate();
     
-    // Aggrégation pour compter les rendez-vous par jour
+    console.log('Période de recherche élargie:', { 
+      startDate: moment(startDate).format('YYYY-MM-DD'), 
+      endDate: moment(endDate).format('YYYY-MM-DD') 
+    });
+    
+    // Vérifier d'abord combien de rendez-vous ce médecin a au total
+    const totalAppointmentsForDoctor = await Appointment.countDocuments({ 
+      doctor: new mongoose.Types.ObjectId(doctorId) 
+    });
+    console.log(`Total rendez-vous pour ce médecin: ${totalAppointmentsForDoctor}`);
+    
+    // Vérifier les rendez-vous dans la période
+    const appointmentsInPeriod = await Appointment.find({
+      doctor: new mongoose.Types.ObjectId(doctorId),
+      appointmentDate: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    });
+    console.log(`Rendez-vous dans la période: ${appointmentsInPeriod.length}`);
+    console.log('Détails des rendez-vous:', appointmentsInPeriod.map(apt => ({
+      date: moment(apt.appointmentDate).format('YYYY-MM-DD'),
+      patientName: apt.patientName,
+      time: apt.appointmentTime
+    })));
+    
+    // Agrégation pour grouper par date
     const appointments = await Appointment.aggregate([
       {
         $match: {
-          doctorId: new mongoose.Types.ObjectId(doctorId), // Création correcte d'un ObjectId
+          doctor: new mongoose.Types.ObjectId(doctorId), 
           appointmentDate: {
             $gte: startDate,
             $lte: endDate
@@ -118,12 +135,13 @@ exports.getDoctorAppointments = async (req, res) => {
       }
     ]);
     
-    // Formater les résultats
+    console.log('Résultats de l\'agrégation:', appointments);
+    
+    // Formater les résultats pour 7 jours (3 passés + aujourd'hui + 3 futurs)
     const formattedAppointments = [];
     
-    // Créer une entrée pour chaque jour, même s'il n'y a pas de rendez-vous
-    for (let i = 0; i < 7; i++) {
-      const date = moment().subtract(6 - i, 'days').format('YYYY-MM-DD');
+    for (let i = -3; i <= 3; i++) {
+      const date = moment().add(i, 'days').format('YYYY-MM-DD');
       const existingData = appointments.find(item => item._id === date);
       
       formattedAppointments.push({
@@ -132,6 +150,9 @@ exports.getDoctorAppointments = async (req, res) => {
       });
     }
     
+    console.log('Données formatées envoyées:', formattedAppointments);
+    console.log('=== FIN DEBUG getDoctorAppointments ===');
+    
     res.status(200).json(formattedAppointments);
   } catch (error) {
     console.error(`Error in getDoctorAppointments for doctorId ${req.params.id}:`, error);
@@ -139,25 +160,34 @@ exports.getDoctorAppointments = async (req, res) => {
   }
 };
 
-// Récupère les rendez-vous pour un patient spécifique (par mois)
 exports.getPatientAppointments = async (req, res) => {
   try {
     const patientId = req.params.id;
+    console.log('=== DEBUG getPatientAppointments ===');
+    console.log('PatientId reçu:', patientId);
     
-    // Vérifier si l'ID est valide
     if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      console.log('ID invalide:', patientId);
       return res.status(400).json({ message: 'ID de patient invalide' });
     }
+    
+    // Récupérer le nom du patient
+    const patient = await Patient.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient non trouvé' });
+    }
+    
+    console.log('Patient trouvé:', patient.name);
     
     const currentYear = moment().year();
     const startOfYear = moment(`${currentYear}-01-01`).startOf('day').toDate();
     const endOfYear = moment(`${currentYear}-12-31`).endOf('day').toDate();
     
-    // Aggrégation pour compter les rendez-vous par mois
+    // Chercher par nom de patient dans les rendez-vous
     const appointments = await Appointment.aggregate([
       {
         $match: {
-          patientId: new mongoose.Types.ObjectId(patientId), // Création correcte d'un ObjectId
+          patientName: patient.name,
           appointmentDate: {
             $gte: startOfYear,
             $lte: endOfYear
@@ -175,13 +205,14 @@ exports.getPatientAppointments = async (req, res) => {
       }
     ]);
     
+    console.log('Résultats de l\'agrégation patient:', appointments);
+    
     // Noms des mois en français
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
     
     // Formater les résultats
     const formattedAppointments = [];
     
-    // Créer une entrée pour chaque mois, même s'il n'y a pas de rendez-vous
     for (let i = 0; i < 12; i++) {
       const monthNumber = i + 1;
       const existingData = appointments.find(item => item._id === monthNumber);
@@ -191,6 +222,9 @@ exports.getPatientAppointments = async (req, res) => {
         count: existingData ? existingData.count : 0
       });
     }
+    
+    console.log('Données formatées patient envoyées:', formattedAppointments);
+    console.log('=== FIN DEBUG getPatientAppointments ===');
     
     res.status(200).json(formattedAppointments);
   } catch (error) {

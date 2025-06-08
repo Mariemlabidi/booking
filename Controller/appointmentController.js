@@ -3,8 +3,14 @@ const Appointment = require('../model/appointmentModel');
 // Créer un nouveau rendez-vous
 exports.createAppointment = async (req, res) => {
   try {
-    const { appointmentDate, appointmentTime } = req.body;
-
+    const { appointmentDate, appointmentTime , doctor} = req.body;
+     
+     if (!doctor) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le médecin est requis pour un rendez-vous.'
+      });
+    }
     
     // Vérifier si le créneau horaire est disponible
     const isAvailable = await Appointment.isTimeSlotAvailable(appointmentDate, appointmentTime);
@@ -19,7 +25,7 @@ exports.createAppointment = async (req, res) => {
     // Créer le rendez-vous
       const appointment = await Appointment.create({
       ...req.body,
-      user: req.user.id // ✅ correction ici
+      user: req.user.id 
     });
     
     res.status(201).json({
